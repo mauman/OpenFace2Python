@@ -49,6 +49,8 @@ using FaceAnalyser_Interop;
 using GazeAnalyser_Interop;
 using FaceDetectorInterop;
 using UtilitiesOF;
+using ZeroMQ;
+using System.Text;
 
 namespace OpenFaceOffline
 {
@@ -109,13 +111,13 @@ namespace OpenFaceOffline
 
         public bool RecordAligned { get; set; } = false; // Aligned face images
         public bool RecordHOG { get; set; } = false; // HOG features extracted from face images
-        public bool Record2DLandmarks { get; set; } = true; // 2D locations of facial landmarks (in pixels)
-        public bool Record3DLandmarks { get; set; } = true; // 3D locations of facial landmarks (in pixels)
-        public bool RecordModelParameters { get; set; } = true; // Facial shape parameters (rigid and non-rigid geometry)
-        public bool RecordPose { get; set; } = true; // Head pose (position and orientation)
-        public bool RecordAUs { get; set; } = true; // Facial action units
-        public bool RecordGaze { get; set; } = true; // Eye gaze
-        public bool RecordTracked { get; set; } = true; // Recording tracked videos or images
+        public bool Record2DLandmarks { get; set; } = false; // 2D locations of facial landmarks (in pixels)
+        public bool Record3DLandmarks { get; set; } = false; // 3D locations of facial landmarks (in pixels)
+        public bool RecordModelParameters { get; set; } = false; // Facial shape parameters (rigid and non-rigid geometry)
+        public bool RecordPose { get; set; } = false; // Head pose (position and orientation)
+        public bool RecordAUs { get; set; } = false; // Facial action units
+        public bool RecordGaze { get; set; } = false; // Eye gaze
+        public bool RecordTracked { get; set; } = false; // Recording tracked videos or images
 
         // Visualisation options
         public bool ShowTrackedVideo { get; set; } = true; // Showing the actual tracking
@@ -145,6 +147,10 @@ namespace OpenFaceOffline
         // Camera calibration parameters
         public float fx = -1, fy = -1, cx = -1, cy = -1;
 
+        // For broadcasting the results
+        private ZeroMQ.ZContext zero_mq_context;
+        private ZeroMQ.ZSocket zero_mq_socket;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -172,6 +178,17 @@ namespace OpenFaceOffline
             landmark_detector = new CLNF(face_model_params);
 
             gaze_analyser = new GazeAnalyserManaged();
+
+            Console.WriteLine("creating NetMQ sender");
+            // Create the ZeroMQ context for broadcasting the results
+            zero_mq_context = ZeroMQ.ZContext.Create();
+            zero_mq_socket = new ZSocket(zero_mq_context, ZeroMQ.ZSocketType.PUSH);
+
+            // Bind on localhost port 5000
+            zero_mq_socket.Bind("tcp://127.0.0.1:5000");
+
+            System.Threading.Thread.Sleep(1000);
+            Console.WriteLine("done");
 
         }
 
@@ -559,9 +576,11 @@ namespace OpenFaceOffline
 
                     auClassGraph.Update(au_classes);
 
+                    string tosend = "";
                     var au_regs_scaled = new Dictionary<String, double>();
                     foreach (var au_reg in au_regs)
                     {
+                        tosend += au_reg.ToString();
                         au_regs_scaled[au_reg.Key] = au_reg.Value / 5.0;
                         if (au_regs_scaled[au_reg.Key] < 0)
                             au_regs_scaled[au_reg.Key] = 0;
@@ -570,6 +589,13 @@ namespace OpenFaceOffline
                             au_regs_scaled[au_reg.Key] = 1;
                     }
                     auRegGraph.Update(au_regs_scaled);
+                    
+                    try
+                    {
+                        zero_mq_socket.Send(new ZFrame("AU: " + tosend.ToString(), Encoding.UTF8), ZeroMQ.ZSocketFlags.DontWait);
+                        System.Threading.Thread.Sleep(10);
+                    }
+                    catch { }
                 }
 
                 if (ShowGeometry)
@@ -577,6 +603,15 @@ namespace OpenFaceOffline
                     int yaw = (int)(pose[4] * 180 / Math.PI + 0.5);
                     int roll = (int)(pose[5] * 180 / Math.PI + 0.5);
                     int pitch = (int)(pose[3] * 180 / Math.PI + 0.5);
+
+                    Console.WriteLine("sending: " + yaw);
+
+                    try
+                    {
+                        zero_mq_socket.Send(new ZFrame("HD: " + yaw.ToString() + " " + pitch.ToString() + " " + roll.ToString(), Encoding.UTF8), ZeroMQ.ZSocketFlags.DontWait);
+                        System.Threading.Thread.Sleep(10);
+                    }
+                    catch { }
 
                     YawLabel.Content = yaw + "°";
                     RollLabel.Content = roll + "°";
