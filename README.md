@@ -10,3 +10,5 @@ Instructions:
 - do not change any parameter, just start the webcam from the first menu
 
 The data is streamed through a ZeroMQ PUSH (fire-and-forget) socket on 127.0.0.1:5000.
+
+An example consumer script is provided (OpenFace_worker.py).
