@@ -1,6 +1,6 @@
 This is a fork of the OpenFace project.
 I modified the code to add the streaming of face and head data to a Python script through ZeroMQ on Windows.
-I just needed it for a research project, and I relaized that it was not available anywhere, so I decided to implement it (though in a quick and dirt way).
+I just needed it for a research project, but I realized that it was not available anywhere, so I decided to implement it (though in a quick and dirt way).
 Hopefully it can be of help for other people.
 
 Instructions:
