@@ -566,6 +566,8 @@ namespace OpenFaceOffline
             gaze_lines = gaze_analyser.CalculateGazeLines(fx, fy, cx, cy);
             gaze_angle = gaze_analyser.GetGazeAngle();
 
+            
+
             // Visualisation (as a separate function)
             Dispatcher.Invoke(DispatcherPriority.Render, new TimeSpan(0, 0, 0, 0, 200), (Action)(() =>
             {
@@ -593,7 +595,7 @@ namespace OpenFaceOffline
                     try
                     {
                         zero_mq_socket.Send(new ZFrame("AU: " + tosend.ToString(), Encoding.UTF8), ZeroMQ.ZSocketFlags.DontWait);
-                        System.Threading.Thread.Sleep(10);
+                        System.Threading.Thread.Sleep(1);
                     }
                     catch { }
                 }
@@ -606,12 +608,7 @@ namespace OpenFaceOffline
 
                     Console.WriteLine("sending: " + yaw);
 
-                    try
-                    {
-                        zero_mq_socket.Send(new ZFrame("HD: " + yaw.ToString() + " " + pitch.ToString() + " " + roll.ToString(), Encoding.UTF8), ZeroMQ.ZSocketFlags.DontWait);
-                        System.Threading.Thread.Sleep(10);
-                    }
-                    catch { }
+                    
 
                     YawLabel.Content = yaw + "°";
                     RollLabel.Content = roll + "°";
@@ -621,13 +618,30 @@ namespace OpenFaceOffline
                     YPoseLabel.Content = (int)pose[1] + " mm";
                     ZPoseLabel.Content = (int)pose[2] + " mm";
 
+                    try
+                    {
+                        zero_mq_socket.Send(new ZFrame("HD: " + pose[0] + " " + pose[1] + " " + pose[2] + " " + yaw.ToString() + " " + pitch.ToString() + " " + roll.ToString(), Encoding.UTF8), ZeroMQ.ZSocketFlags.DontWait);
+                        System.Threading.Thread.Sleep(1);
+                    }
+                    catch { }
+
                     nonRigidGraph.Update(non_rigid_params);
 
                     // Update eye gaze
-                    String x_angle = String.Format("{0:F0}°", gaze_angle.Item1 * (180.0 / Math.PI));
-                    String y_angle = String.Format("{0:F0}°", gaze_angle.Item2 * (180.0 / Math.PI));
+                    double gazeH, gazeV;
+                    gazeH = gaze_angle.Item1 * (180.0 / Math.PI);
+                    gazeV = gaze_angle.Item2 * (180.0 / Math.PI);
+                    String x_angle = String.Format("{0:F0}°", gazeH);
+                    String y_angle = String.Format("{0:F0}°", gazeV);
                     GazeXLabel.Content = x_angle;
                     GazeYLabel.Content = y_angle;
+
+                    try
+                    {
+                        zero_mq_socket.Send(new ZFrame("GZ: " + gazeH.ToString() + " " + gazeV.ToString(), Encoding.UTF8), ZeroMQ.ZSocketFlags.DontWait);
+                        System.Threading.Thread.Sleep(1);
+                    }
+                    catch { }
                 }
 
                 if (ShowTrackedVideo)
