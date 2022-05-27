@@ -620,7 +620,7 @@ namespace OpenFaceOffline
 
                     try
                     {
-                        zero_mq_socket.Send(new ZFrame("HD: " + pose[0] + " " + pose[1] + " " + pose[2] + " " + yaw.ToString() + " " + pitch.ToString() + " " + roll.ToString(), Encoding.UTF8), ZeroMQ.ZSocketFlags.DontWait);
+                        zero_mq_socket.Send(new ZFrame("HD: " + pose[0] + " " + pose[1] + " " + pose[2] + " " + yaw.ToString() + " " + pitch.ToString() + " " + roll.ToString() + " " + confidence.ToString(), Encoding.UTF8), ZeroMQ.ZSocketFlags.DontWait);
                         System.Threading.Thread.Sleep(1);
                     }
                     catch { }
